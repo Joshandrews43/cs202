@@ -6,4 +6,5 @@ void
 set_to_five(int *ptr)
 {
 	// TODO: Your code here.
+	*ptr = 5;
 }

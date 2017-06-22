@@ -13,5 +13,7 @@ swap(int *p1, int *p2)
 	assert(p2 != NULL);
 
 	// TODO: Your code here.
-	assert(0);
+	int temp = *p1;
+	*p1 = *p2;
+	*p2 = temp;
 }
