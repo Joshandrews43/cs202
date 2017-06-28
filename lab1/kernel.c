@@ -170,11 +170,19 @@ interrupt(registers_t *reg)
 		// for this register out of 'current->p_registers'.
 		current->p_state = P_ZOMBIE;
 		current->p_exit_status = current->p_registers.reg_eax;
-		
-		if (current->p_waiting_pid != 0) {
-			proc_array[current->p_waiting_pid].p_state = P_RUNNABLE;
-			proc_array[current->p_waiting_pid].p_registers.reg_eax = current->p_exit_status;
-			current->p_waiting_pid = 0;
+
+		int i;
+
+		for (i = 0; i < NPROCS; i++) {
+			if (current->p_waiting_processes[i]) {
+				proc_array[i].p_state = P_RUNNABLE;
+				proc_array[i].p_registers.reg_eax = current->p_state == P_EMPTY ? -1 : current->p_exit_status;
+				current->p_waiting_processes[i] = 0;
+
+				if (current->p_state != P_EMPTY) {
+					current->p_state = P_EMPTY;
+				}
+			}
 		}
 
 		schedule();
@@ -198,7 +206,7 @@ interrupt(registers_t *reg)
 			proc_array[p].p_state = P_EMPTY;
 		} else {
 			current->p_state = P_BLOCKED;
-			proc_array[p].p_waiting_pid = current->p_pid;
+			proc_array[p].p_waiting_processes[current->p_pid] = 1;
 		}
 
 		schedule();

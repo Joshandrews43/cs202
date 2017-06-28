@@ -23,7 +23,7 @@ typedef struct process {
 	procstate_t p_state;		// Process state; see above
 	int p_exit_status;		// Process's exit status (if it has
 					// exited and p_state == P_ZOMBIE)
-	pid_t p_waiting_pid; // The waiting process
+	int p_waiting_processes[NPROCS]; // The waiting process queue, p_waiting_processes[i] = 1 means the process i is waiting and blocked
 } process_t;
 
 
