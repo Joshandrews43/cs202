@@ -216,6 +216,23 @@ cmd_free(command_t *cmd)
 		return;
 
 	/* Your code here. */
+	for (i = 0; i <= MAXTOKENS; i++) {
+		free(cmd->argv[i]);
+	}
+
+	for (i = 0; i < 3; i++) {
+		free(cmd->redirect_filename[i]);
+	}
+
+	if (cmd->subshell != NULL) {
+		cmd_free(cmd->subshell);
+	}
+
+	if (cmd->next != NULL) {
+		cmd_free(cmd->next);
+	}
+
+	free(cmd);
 }
 
 
