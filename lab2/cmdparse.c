@@ -309,6 +309,12 @@ cmd_parse(parsestate_t *parsestate)
              //     have been given fit together. (It may be helpful to
              //     look over cmdparse.h again.)
             /* Your code here. */
+			cmd->subshell = cmd_line_parse(parsestate, 1);
+
+			if (!cmd->subshell) {
+				goto error;
+			}
+
 			break;
 		default:
 			parse_ungettoken(parsestate);
@@ -320,7 +326,7 @@ cmd_parse(parsestate_t *parsestate)
 	// NULL-terminate the argv list
 	cmd->argv[i] = 0;
 
-	if (i == 0) {
+	if (i == 0 && cmd->subshell == NULL) {
 		/* Empty command */
 		cmd_free(cmd);
 		return NULL;
