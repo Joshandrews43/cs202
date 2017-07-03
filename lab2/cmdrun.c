@@ -211,6 +211,16 @@ cmd_exec(command_t *cmd, int *pass_pipefd)
 	//    Explain what that race condition is, and fix it.
 	//    Hint: Investigate fchdir().
 	/* Your code here */
+	pid = fork();
+
+	if (pid < 0) {
+		//fprintf(stderr, "fork failed\n");
+	} else if (pid == 0) {
+		//printf("running command \"%s\" in child process, pid = %d\n", cmd->argv[0], (int)getpid());
+		execvp(cmd->argv[0], cmd->argv);
+	} else {
+		//printf("forked a child process (pid = %d) to execute command\n", pid);
+	}
 
 	// return the child process ID
 	return pid;
@@ -258,6 +268,10 @@ cmd_line_exec(command_t *cmdlist)
 		// If an error occurs in cmd_exec, feel free to abort().
 
 		/* Your code here */
+		pid_t pid = cmd_exec(cmdlist, &pipefd);
+		pid_t result = waitpid(pid, &wp_status, 0);
+
+		//printf("command execution is completed, pid: %d, status: %d\n", result, wp_status);
 
 		cmdlist = cmdlist->next;
 	}

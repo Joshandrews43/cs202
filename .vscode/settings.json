@@ -1,5 +1,11 @@
 {
     "files.associations": {
-        "cmdparse.h": "c"
+        "cmdparse.h": "c",
+        "types.h": "c",
+        "fcntl.h": "c",
+        "sched.h": "c",
+        "time.h": "c",
+        "unistd.h": "c",
+        "waitflags.h": "c"
     }
 }
