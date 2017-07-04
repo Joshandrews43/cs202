@@ -214,12 +214,25 @@ cmd_exec(command_t *cmd, int *pass_pipefd)
 	pid = fork();
 
 	if (pid < 0) {
-		//fprintf(stderr, "fork failed\n");
+
 	} else if (pid == 0) {
-		//printf("running command \"%s\" in child process, pid = %d\n", cmd->argv[0], (int)getpid());
+		if (cmd->redirect_filename[0] != NULL) {
+			int fd = open(cmd->redirect_filename[0], O_RDONLY | S_IRUSR);
+
+			dup2(fd, 0);
+			close(fd);
+		}
+
+		if (cmd->redirect_filename[1] != NULL) {
+			int fd = open(cmd->redirect_filename[1], O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
+
+			dup2(fd, 1);
+			close(fd);
+		}
+
 		execvp(cmd->argv[0], cmd->argv);
 	} else {
-		//printf("forked a child process (pid = %d) to execute command\n", pid);
+
 	}
 
 	// return the child process ID
@@ -270,8 +283,6 @@ cmd_line_exec(command_t *cmdlist)
 		/* Your code here */
 		pid_t pid = cmd_exec(cmdlist, &pipefd);
 		pid_t result = waitpid(pid, &wp_status, 0);
-
-		//printf("command execution is completed, pid: %d, status: %d\n", result, wp_status);
 
 		cmdlist = cmdlist->next;
 	}
