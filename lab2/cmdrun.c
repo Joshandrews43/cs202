@@ -115,6 +115,7 @@ cmd_exec(command_t *cmd, int *pass_pipefd)
 	// Return -1 if the pipe fails.
 	if (cmd->controlop == CMD_PIPE) {
 		/* Your code here*/
+		pipe(pipefd);
 	}
 
 
@@ -212,10 +213,16 @@ cmd_exec(command_t *cmd, int *pass_pipefd)
 	//    Hint: Investigate fchdir().
 	/* Your code here */
 	pid = fork();
+		
+	if (pid == 0) {
+		dup2(*pass_pipefd, STDIN_FILENO);
 
-	if (pid < 0) {
+		if (cmd->controlop == CMD_PIPE) {
+			close(pipefd[0]);
+			dup2(pipefd[1], 1);
+			close(pipefd[1]); 
+		}
 
-	} else if (pid == 0) {
 		if (cmd->redirect_filename[0] != NULL) {
 			int fd = open(cmd->redirect_filename[0], O_RDONLY | S_IRUSR);
 
@@ -237,8 +244,13 @@ cmd_exec(command_t *cmd, int *pass_pipefd)
 		}
 
 		execvp(cmd->argv[0], cmd->argv);
-	} else {
-
+	} else if (pid > 0) {
+		*pass_pipefd = STDIN_FILENO;
+		
+		if (cmd->controlop == CMD_PIPE) {
+			close(pipefd[1]);
+			*pass_pipefd = pipefd[0];
+		}
 	}
 
 	// return the child process ID
@@ -288,6 +300,10 @@ cmd_line_exec(command_t *cmdlist)
 
 		/* Your code here */
 		pid_t pid = cmd_exec(cmdlist, &pipefd);
+
+		if (pid < 0) {
+			abort();
+		}
 
 		if (cmdlist->controlop == CMD_PIPE || cmdlist->controlop == CMD_BACKGROUND) {
 			cmd_status = 0;
