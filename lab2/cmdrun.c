@@ -230,6 +230,12 @@ cmd_exec(command_t *cmd, int *pass_pipefd)
 			close(fd);
 		}
 
+		if (cmd->subshell) {
+			int cmd_status = cmd_line_exec(cmd->subshell);
+
+			exit(cmd_status == 0 ? 0 : 5);
+		}
+
 		execvp(cmd->argv[0], cmd->argv);
 	} else {
 
@@ -282,9 +288,14 @@ cmd_line_exec(command_t *cmdlist)
 
 		/* Your code here */
 		pid_t pid = cmd_exec(cmdlist, &pipefd);
-		pid_t result = waitpid(pid, &wp_status, 0);
 
-		cmd_status = wp_status;
+		if (cmdlist->controlop == CMD_PIPE || cmdlist->controlop == CMD_BACKGROUND) {
+			cmd_status = 0;
+		} else {
+			pid_t result = waitpid(pid, &wp_status, 0);
+
+			cmd_status = wp_status;
+		}
 
 		switch (cmdlist->controlop) {
 			case CMD_AND:
@@ -297,7 +308,7 @@ cmd_line_exec(command_t *cmdlist)
 				if (cmd_status == 0) {
 					goto done;
 				}
-				
+
 				break;
 			default:
 				break;
