@@ -284,6 +284,25 @@ cmd_line_exec(command_t *cmdlist)
 		pid_t pid = cmd_exec(cmdlist, &pipefd);
 		pid_t result = waitpid(pid, &wp_status, 0);
 
+		cmd_status = wp_status;
+
+		switch (cmdlist->controlop) {
+			case CMD_AND:
+				if (cmd_status != 0) {
+					goto done;
+				}
+
+				break;
+			case CMD_OR:
+				if (cmd_status == 0) {
+					goto done;
+				}
+				
+				break;
+			default:
+				break;
+		}
+
 		cmdlist = cmdlist->next;
 	}
 
