@@ -328,7 +328,7 @@ cmd_parse(parsestate_t *parsestate)
             /* Your code here. */
 			cmd->subshell = cmd_line_parse(parsestate, 1);
 
-			if (!cmd->subshell) {
+			if (cmd->subshell == NULL) {
 				goto error;
 			}
 

@@ -6,6 +6,7 @@
         "sched.h": "c",
         "time.h": "c",
         "unistd.h": "c",
-        "waitflags.h": "c"
+        "waitflags.h": "c",
+        "fcntl2.h": "c"
     }
 }

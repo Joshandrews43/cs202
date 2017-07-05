@@ -111,6 +111,16 @@ cmd_exec(command_t *cmd, int *pass_pipefd)
 	 * change it.
 	 */
 
+	 if (cmd->argv[0] != NULL && strcmp("exit", cmd->argv[0]) == 0) {
+		 int exit_status = 0;
+
+		 if (cmd->argv[1] != NULL) {
+			 exit_status = strtol(cmd->argv[1], NULL, 10);
+		 }
+
+		 exit(exit_status);
+	 }
+
 	// Create a pipe, if this command is the left-hand side of a pipe.
 	// Return -1 if the pipe fails.
 	if (cmd->controlop == CMD_PIPE) {
@@ -231,9 +241,16 @@ cmd_exec(command_t *cmd, int *pass_pipefd)
 		}
 
 		if (cmd->redirect_filename[1] != NULL) {
-			int fd = open(cmd->redirect_filename[1], O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
+			int fd = open(cmd->redirect_filename[1], O_RDWR | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
 
 			dup2(fd, 1);
+			close(fd);
+		}
+
+		if (cmd->redirect_filename[2] != NULL) {
+			int fd = open(cmd->redirect_filename[2], O_RDWR | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
+
+			dup2(fd, 2);
 			close(fd);
 		}
 
