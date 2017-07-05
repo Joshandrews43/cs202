@@ -260,6 +260,16 @@ cmd_exec(command_t *cmd, int *pass_pipefd)
 			exit(cmd_status == 0 ? 0 : 5);
 		}
 
+		if (cmd->argv[0] != NULL && strcmp("cd", cmd->argv[0]) == 0) {
+			int cd_status = chdir(cmd->argv[1]);
+
+			if (cd_status != 0) {
+				perror("cd");
+			}
+
+			exit(cd_status == 0 ? 0: 1);
+		}
+
 		execvp(cmd->argv[0], cmd->argv);
 	} else if (pid > 0) {
 		*pass_pipefd = STDIN_FILENO;
@@ -267,6 +277,10 @@ cmd_exec(command_t *cmd, int *pass_pipefd)
 		if (cmd->controlop == CMD_PIPE) {
 			close(pipefd[1]);
 			*pass_pipefd = pipefd[0];
+		}
+
+		if (cmd->argv[0] != NULL && strcmp("cd", cmd->argv[0]) == 0) {
+			chdir(cmd->argv[1]);
 		}
 	}
 
