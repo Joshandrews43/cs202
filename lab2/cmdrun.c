@@ -18,6 +18,8 @@
 #include "cmdparse.h"
 #include "cmdrun.h"
 
+#define MAX_DIRECTORY_NAME_LENGTH 1024
+
 /* cmd_exec(cmd, pass_pipefd)
  *
  *   Execute the single command specified in the 'cmd' command structure.
@@ -270,6 +272,28 @@ cmd_exec(command_t *cmd, int *pass_pipefd)
 			exit(cd_status == 0 ? 0: 1);
 		}
 
+		if (cmd->argv[0] != NULL && strcmp("our_pwd", cmd->argv[0]) == 0) {
+			size_t directory_size = sizeof(char) * (MAX_DIRECTORY_NAME_LENGTH + 1);
+			char *directory = malloc(directory_size);
+			char *pwd_status = getcwd(directory, directory_size);
+
+			if (pwd_status == NULL) {
+				perror("pwd");
+			} else {
+				int i = 0;
+
+				while (directory[i] != '\0') {
+					i++;
+				}
+
+				directory[i] = '\n';
+
+				write(STDOUT_FILENO, directory, i + 1);
+			}
+
+			exit(*pwd_status == 0 ? 0 : 1);
+		}
+
 		execvp(cmd->argv[0], cmd->argv);
 	} else if (pid > 0) {
 		*pass_pipefd = STDIN_FILENO;
@@ -281,6 +305,12 @@ cmd_exec(command_t *cmd, int *pass_pipefd)
 
 		if (cmd->argv[0] != NULL && strcmp("cd", cmd->argv[0]) == 0) {
 			chdir(cmd->argv[1]);
+		}
+
+		if (cmd->argv[0] != NULL && strcmp("our_pwd", cmd->argv[0]) == 0) {
+			char directory[MAX_DIRECTORY_NAME_LENGTH + 1];
+
+			getcwd(directory, sizeof(directory));
 		}
 	}
 
