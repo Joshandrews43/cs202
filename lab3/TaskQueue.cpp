@@ -5,16 +5,16 @@ TaskQueue::
 TaskQueue()
 {
     // TODO: Your code here.
-    smutex_init(this->lock);
-    scond_init(this->fill);
+    smutex_init(&this->lock);
+    scond_init(&this->fill);
 }
 
 TaskQueue::
 ~TaskQueue()
 {
     // TODO: Your code here.
-    smutex_destroy(this->lock);
-    scond_destroy(this->fill);
+    smutex_destroy(&this->lock);
+    scond_destroy(&this->fill);
 }
 
 /*
@@ -32,11 +32,11 @@ int TaskQueue::
 size()
 {
     // TODO: Your code here.
-    smutex_lock(this->lock);
+    smutex_lock(&this->lock);
 
     int size = this->task_queue.size();
 
-    smutex_unlock(this->lock);
+    smutex_unlock(&this->lock);
 
     return size; // Keep compiler happy until routine done.
 }
@@ -56,11 +56,11 @@ bool TaskQueue::
 empty()
 {
     // TODO: Your code here.
-    smutex_lock(this->lock);
+    smutex_lock(&this->lock);
 
     bool is_empty = this->task_queue.empty();
 
-    smutex_unlock(this->lock);
+    smutex_unlock(&this->lock);
 
     return is_empty; // Keep compiler happy until routine done.
 }
@@ -80,12 +80,12 @@ void TaskQueue::
 enqueue(Task task)
 {
     // TODO: Your code here.
-    smutex_lock(this->lock);
+    smutex_lock(&this->lock);
 
     this->task_queue.push(task);
 
-    scond_signal(this->fill, this->lock);
-    smutex_unlock(this->lock);
+    scond_signal(&this->fill, &this->lock);
+    smutex_unlock(&this->lock);
 }
 
 /*
@@ -104,16 +104,16 @@ Task TaskQueue::
 dequeue()
 {
     // TODO: Your code here.
-    smutex_lock(this->lock);
+    smutex_lock(&this->lock);
 
     while (this->task_queue.empty()) {
-        scond_wait(this->fill, this->lock);
+        scond_wait(&this->fill, &this->lock);
     }
 
     Task task = this->task_queue.front();
     this->task_queue.pop();
 
-    smutex_unlock(this->lock);
+    smutex_unlock(&this->lock);
 
     return task; // Keep compiler happy until routine done.
 }

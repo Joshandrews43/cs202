@@ -4,6 +4,8 @@
 #include "sthread.h"
 #include <queue>
 
+using namespace std;
+
 typedef void (*handler_t) (void *); 
 
 struct Task {
@@ -23,9 +25,9 @@ struct Task {
 class TaskQueue {
     private:
     // TODO: More needed here.
-    smutex_t *lock;
-    scond_t *fill;
-    std::queue<Task> task_queue;
+    smutex_t lock;
+    scond_t fill;
+    queue<Task> task_queue;
 
     public:
     TaskQueue();

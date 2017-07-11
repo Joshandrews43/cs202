@@ -1,8 +1,11 @@
 #include <cstring>
 #include <cstdlib>
+#include <iostream>
 
 #include "EStore.h"
 #include "TaskQueue.h"
+
+using namespace std;
 
 class Simulation
 {
@@ -43,6 +46,8 @@ static void*
 supplierGenerator(void* arg)
 {
     // TODO: Your code here.
+    cout << "Running supplier generator...\n";
+
     return NULL; // Keep compiler happy.
 }
 
@@ -74,6 +79,8 @@ static void*
 customerGenerator(void* arg)
 {
     // TODO: Your code here.
+    cout << "Running customer generator...\n";
+
     return NULL; // Keep compiler happy.
 }
 
@@ -95,6 +102,8 @@ static void*
 supplier(void* arg)
 {
     // TODO: Your code here.
+    cout << "Running supplier...\n";
+
     return NULL; // Keep compiler happy.
 }
 
@@ -116,6 +125,8 @@ static void*
 customer(void* arg)
 {
     // TODO: Your code here.
+    cout << "Running customer...\n";
+
     return NULL; // Keep compiler happy.
 }
 
@@ -146,31 +157,35 @@ static void
 startSimulation(int numSuppliers, int numCustomers, int maxTasks, bool useFineMode)
 {
     // TODO: Your code here.
+    cout << "Start simulation...\n";
+
     Simulation *simulation = new Simulation(useFineMode);
     simulation->maxTasks = maxTasks;
     simulation->numSuppliers = numSuppliers;
     simulation->numCustomers = numCustomers;
 
-    sthread_t *supplier_generator_worker;
-    sthread_t *customer_generator_worker;
-    sthread_t *supplier_workers[numSuppliers];
-    sthread_t *customer_workers[numCustomers];
+    sthread_t supplier_generator_worker;
+    sthread_t customer_generator_worker;
+    sthread_t supplier_workers[numSuppliers];
+    sthread_t customer_workers[numCustomers];
 
-    sthread_create(supplier_generator_worker, supplierGenerator, simulation);
-    sthread_create(customer_generator_worker, customerGenerator, simulation);
+    sthread_create(&supplier_generator_worker, supplierGenerator, simulation);
+    sthread_create(&customer_generator_worker, customerGenerator, simulation);
 
-    sthread_join(*supplier_generator_worker);
-    sthread_join(*customer_generator_worker);
+    sthread_join(supplier_generator_worker);
+    sthread_join(customer_generator_worker);
 
     for (int i = 0; i < numSuppliers; i++) {
-        sthread_create(supplier_workers[i], supplier, simulation);
-        sthread_join(*supplier_workers[i]);
+        sthread_create(&supplier_workers[i], supplier, simulation);
+        sthread_join(supplier_workers[i]);
     }
 
     for (int i = 0; i < numCustomers; i++) {
-        sthread_create(customer_workers[i], customer, simulation);
-        sthread_join(*customer_workers[i]);
+        sthread_create(&customer_workers[i], customer, simulation);
+        sthread_join(customer_workers[i]);
     }
+
+    cout << "Main thread ends...\n";
 }
 
 int main(int argc, char **argv)
