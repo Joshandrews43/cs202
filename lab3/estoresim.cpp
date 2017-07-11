@@ -146,6 +146,31 @@ static void
 startSimulation(int numSuppliers, int numCustomers, int maxTasks, bool useFineMode)
 {
     // TODO: Your code here.
+    Simulation *simulation = new Simulation(useFineMode);
+    simulation->maxTasks = maxTasks;
+    simulation->numSuppliers = numSuppliers;
+    simulation->numCustomers = numCustomers;
+
+    sthread_t *supplier_generator_worker;
+    sthread_t *customer_generator_worker;
+    sthread_t *supplier_workers[numSuppliers];
+    sthread_t *customer_workers[numCustomers];
+
+    sthread_create(supplier_generator_worker, supplierGenerator, simulation);
+    sthread_create(customer_generator_worker, customerGenerator, simulation);
+
+    sthread_join(*supplier_generator_worker);
+    sthread_join(*customer_generator_worker);
+
+    for (int i = 0; i < numSuppliers; i++) {
+        sthread_create(supplier_workers[i], supplier, simulation);
+        sthread_join(*supplier_workers[i]);
+    }
+
+    for (int i = 0; i < numCustomers; i++) {
+        sthread_create(customer_workers[i], customer, simulation);
+        sthread_join(*customer_workers[i]);
+    }
 }
 
 int main(int argc, char **argv)
