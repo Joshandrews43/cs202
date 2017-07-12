@@ -4,6 +4,7 @@
 
 #include "EStore.h"
 #include "TaskQueue.h"
+#include "RequestGenerator.h"
 
 using namespace std;
 
@@ -48,6 +49,13 @@ supplierGenerator(void* arg)
     // TODO: Your code here.
     cout << "Running supplier generator...\n";
 
+    Simulation *simulation = (Simulation *)arg;
+    SupplierRequestGenerator *supplier_request_generator = new SupplierRequestGenerator(&simulation->supplierTasks);
+    supplier_request_generator->enqueueTasks(simulation->maxTasks, &simulation->store);
+    supplier_request_generator->enqueueStops(simulation->numSuppliers);
+
+    sthread_exit();
+
     return NULL; // Keep compiler happy.
 }
 
@@ -81,6 +89,13 @@ customerGenerator(void* arg)
     // TODO: Your code here.
     cout << "Running customer generator...\n";
 
+    Simulation *simulation = (Simulation *)arg;
+    CustomerRequestGenerator *customer_request_generator = new CustomerRequestGenerator(&simulation->customerTasks, simulation->store.fineModeEnabled());
+    customer_request_generator->enqueueTasks(simulation->maxTasks, &simulation->store);
+    customer_request_generator->enqueueStops(simulation->numCustomers);
+
+    sthread_exit();
+
     return NULL; // Keep compiler happy.
 }
 
@@ -104,6 +119,14 @@ supplier(void* arg)
     // TODO: Your code here.
     cout << "Running supplier...\n";
 
+    Simulation *simulation = (Simulation *)arg;
+
+    while (true) {
+        Task task = simulation->supplierTasks.dequeue();
+
+        task.handler(task.arg);
+    }
+
     return NULL; // Keep compiler happy.
 }
 
@@ -126,6 +149,14 @@ customer(void* arg)
 {
     // TODO: Your code here.
     cout << "Running customer...\n";
+
+    Simulation *simulation = (Simulation *)arg;
+
+    while (true) {
+        Task task = simulation->customerTasks.dequeue();
+
+        task.handler(task.arg);
+    }
 
     return NULL; // Keep compiler happy.
 }
@@ -177,11 +208,17 @@ startSimulation(int numSuppliers, int numCustomers, int maxTasks, bool useFineMo
 
     for (int i = 0; i < numSuppliers; i++) {
         sthread_create(&supplier_workers[i], supplier, simulation);
-        sthread_join(supplier_workers[i]);
     }
 
     for (int i = 0; i < numCustomers; i++) {
         sthread_create(&customer_workers[i], customer, simulation);
+    }
+
+    for (int i = 0; i < numSuppliers; i++) {
+        sthread_join(supplier_workers[i]);
+    }
+
+    for (int i = 0; i < numCustomers; i++) {
         sthread_join(customer_workers[i]);
     }
 
