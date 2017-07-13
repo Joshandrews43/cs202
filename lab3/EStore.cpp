@@ -343,7 +343,7 @@ discountItem(int item_id, double discount)
 
     item->discount = discount;
 
-    if (original_discount > discount) {
+    if (original_discount < discount) {
         scond_broadcast(&this->available, &this->lock);
     }
 
