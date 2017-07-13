@@ -188,7 +188,7 @@ static void
 startSimulation(int numSuppliers, int numCustomers, int maxTasks, bool useFineMode)
 {
     // TODO: Your code here.
-    cout << "Start simulation...\n";
+    cout << "Simulation starts...\n";
 
     Simulation *simulation = new Simulation(useFineMode);
     simulation->maxTasks = maxTasks;
@@ -222,7 +222,7 @@ startSimulation(int numSuppliers, int numCustomers, int maxTasks, bool useFineMo
         sthread_join(customer_workers[i]);
     }
 
-    cout << "Main thread ends...\n";
+    cout << "Simulation ends...\n";
 }
 
 int main(int argc, char **argv)
