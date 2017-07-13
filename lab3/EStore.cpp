@@ -21,12 +21,19 @@ EStore(bool enableFineMode)
     : fineMode(enableFineMode)
 {
     // TODO: Your code here.
+    this->shipping_cost = 3;
+    this->store_discount = 0;
+
+    smutex_init(&this->lock);
+    scond_init(&this->available);
 }
 
 EStore::
 ~EStore()
 {
     // TODO: Your code here.
+    smutex_destroy(&this->lock);
+    scond_destroy(&this->available);
 }
 
 /*
@@ -65,6 +72,27 @@ buyItem(int item_id, double budget)
     assert(!fineModeEnabled());
 
     // TODO: Your code here.
+    if (item_id < 0 || item_id > INVENTORY_SIZE) {
+        return;
+    }
+
+    smutex_lock(&this->lock);
+
+    Item item = this->inventory[item_id];
+
+    if (!item.valid) {
+        smutex_unlock(&this->lock);
+
+        return;
+    }
+
+    while (item.quantity == 0 || item.price * (1 - item.discount) + this->shipping_cost > budget) {
+        scond_wait(&this->available, &this->lock);
+    }
+
+    this->inventory[item_id].quantity--;
+
+    smutex_unlock(&this->lock);
 }
 
 /*
@@ -137,6 +165,29 @@ void EStore::
 addItem(int item_id, int quantity, double price, double discount)
 {
     // TODO: Your code here.
+    if (item_id < 0 || item_id > INVENTORY_SIZE) {
+        return;
+    }
+
+    smutex_lock(&this->lock);
+
+    Item item = this->inventory[item_id];
+
+    if (item.valid) {
+        smutex_unlock(&this->lock);
+
+        return;
+    }
+
+    item.valid = true;
+    item.quantity = quantity;
+    item.price = price;
+    item.discount = discount;
+
+    this->inventory[item_id] = item;
+
+    scond_broadcast(&this->available, &this->lock);
+    smutex_unlock(&this->lock);
 }
 
 /*
@@ -158,6 +209,23 @@ void EStore::
 removeItem(int item_id)
 {
     // TODO: Your code here.
+    if (item_id < 0 || item_id > INVENTORY_SIZE) {
+        return;
+    }
+
+    smutex_lock(&this->lock);
+
+    Item *item = &this->inventory[item_id];
+
+    if (!item->valid) {
+        smutex_unlock(&this->lock);
+
+        return;
+    }
+
+    item->valid = false;
+
+    smutex_unlock(&this->lock);
 }
 
 /*
@@ -176,6 +244,24 @@ void EStore::
 addStock(int item_id, int count)
 {
     // TODO: Your code here.
+    if (item_id < 0 || item_id > INVENTORY_SIZE) {
+        return;
+    }
+
+    smutex_lock(&this->lock);
+
+    Item *item = &this->inventory[item_id];
+
+    if (!item->valid) {
+        smutex_unlock(&this->lock);
+
+        return;
+    }
+
+    item->quantity += count;
+
+    scond_broadcast(&this->available, &this->lock);
+    smutex_unlock(&this->lock);
 }
 
 /*
@@ -196,6 +282,29 @@ void EStore::
 priceItem(int item_id, double price)
 {
     // TODO: Your code here.
+    if (item_id < 0 || item_id > INVENTORY_SIZE) {
+        return;
+    }
+
+    smutex_lock(&this->lock);
+
+    Item *item = &this->inventory[item_id];
+
+    if (!item->valid) {
+        smutex_unlock(&this->lock);
+
+        return;
+    }
+
+    double original_price = item->price;
+
+    item->price = price;
+
+    if (original_price > price) {
+        scond_broadcast(&this->available, &this->lock);
+    }
+
+    smutex_unlock(&this->lock);
 }
 
 /*
@@ -216,6 +325,29 @@ void EStore::
 discountItem(int item_id, double discount)
 {
     // TODO: Your code here.
+    if (item_id < 0 || item_id > INVENTORY_SIZE) {
+        return;
+    }
+
+    smutex_lock(&this->lock);
+
+    Item *item = &this->inventory[item_id];
+
+    if (!item->valid) {
+        smutex_unlock(&this->lock);
+
+        return;
+    }
+
+    double original_discount = item->discount;
+
+    item->discount = discount;
+
+    if (original_discount > discount) {
+        scond_broadcast(&this->available, &this->lock);
+    }
+
+    smutex_unlock(&this->lock);
 }
 
 /*
@@ -234,6 +366,17 @@ void EStore::
 setShippingCost(double cost)
 {
     // TODO: Your code here.
+    smutex_lock(&this->lock);
+
+    double original_shipping_cost = this->shipping_cost;
+
+    this->shipping_cost = cost;
+
+    if (original_shipping_cost > cost) {
+        scond_broadcast(&this->available, &this->lock);
+    }
+
+    smutex_unlock(&this->lock);
 }
 
 /*
@@ -252,6 +395,17 @@ void EStore::
 setStoreDiscount(double discount)
 {
     // TODO: Your code here.
+    smutex_lock(&this->lock);
+
+    double original_store_discount = this->store_discount;
+
+    this->store_discount = discount;
+
+    if (original_store_discount < discount) {
+        scond_broadcast(&this->available, &this->lock);
+    }
+
+    smutex_unlock(&this->lock);
 }
 
 

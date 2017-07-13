@@ -3,6 +3,7 @@
 #include <vector>
 
 #include "Request.h"
+#include "sthread.h"
 
 /* 
  * ------------------------------------------------------------------
@@ -69,6 +70,10 @@ class EStore {
     Item inventory[INVENTORY_SIZE];
     const bool fineMode;
     // TODO: More needed here.
+    double shipping_cost;
+    double store_discount;
+    smutex_t lock;
+    scond_t available;
 
     public:
 
