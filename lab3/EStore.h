@@ -73,6 +73,7 @@ class EStore {
     double shipping_cost;
     double store_discount;
     smutex_t lock;
+    smutex_t locks[INVENTORY_SIZE];
     scond_t available;
 
     public:

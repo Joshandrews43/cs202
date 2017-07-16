@@ -26,6 +26,12 @@ EStore(bool enableFineMode)
 
     smutex_init(&this->lock);
     scond_init(&this->available);
+
+    if (this->fineMode) {
+        for (int i = 0; i < INVENTORY_SIZE; i++) {
+            smutex_init(&this->locks[i]);
+        }
+    }
 }
 
 EStore::
@@ -34,6 +40,12 @@ EStore::
     // TODO: Your code here.
     smutex_destroy(&this->lock);
     scond_destroy(&this->available);
+
+    if (this->fineMode) {
+        for (int i = 0; i < INVENTORY_SIZE; i++) {
+            smutex_destroy(&this->locks[i]);
+        }
+    }
 }
 
 /*
@@ -146,6 +158,45 @@ buyManyItems(vector<int>* item_ids, double budget)
     assert(fineModeEnabled());
 
     // TODO: Your code here.
+    double total_cost = 0;
+
+    for (unsigned int i = 0; i < item_ids->size(); i++) {
+        int item_id = item_ids->data()[i];
+
+        if (item_id < 0 || item_id > INVENTORY_SIZE) {
+            return;
+        }
+
+        smutex_lock(&this->locks[item_id]);
+
+        Item item = this->inventory[item_id];
+
+        if (!item.valid || item.quantity == 0) {
+            smutex_unlock(&this->locks[item_id]);
+
+            return;
+        }
+
+        total_cost += item.price * (1 - item.discount) + this->shipping_cost;
+
+        if (total_cost > budget) {
+            smutex_unlock(&this->locks[item_id]);
+
+            return;
+        }
+
+        smutex_unlock(&this->locks[item_id]);
+    }
+
+    for (unsigned int i = 0; i < item_ids->size(); i++) {
+        int item_id = item_ids->data()[i];
+
+        smutex_lock(&this->locks[item_id]);
+
+        this->inventory[item_id].quantity--;
+
+        smutex_unlock(&this->locks[item_id]);
+    }
 }
 
 /*
@@ -169,12 +220,14 @@ addItem(int item_id, int quantity, double price, double discount)
         return;
     }
 
-    smutex_lock(&this->lock);
+    smutex_t *lock = this->fineMode ? &this->locks[item_id] : &this->lock;
+
+    smutex_lock(lock);
 
     Item item = this->inventory[item_id];
 
     if (item.valid) {
-        smutex_unlock(&this->lock);
+        smutex_unlock(lock);
 
         return;
     }
@@ -186,8 +239,8 @@ addItem(int item_id, int quantity, double price, double discount)
 
     this->inventory[item_id] = item;
 
-    scond_broadcast(&this->available, &this->lock);
-    smutex_unlock(&this->lock);
+    scond_broadcast(&this->available, lock);
+    smutex_unlock(lock);
 }
 
 /*
@@ -213,19 +266,21 @@ removeItem(int item_id)
         return;
     }
 
-    smutex_lock(&this->lock);
+    smutex_t *lock = this->fineMode ? &this->locks[item_id] : &this->lock;
+
+    smutex_lock(lock);
 
     Item *item = &this->inventory[item_id];
 
     if (!item->valid) {
-        smutex_unlock(&this->lock);
+        smutex_unlock(lock);
 
         return;
     }
 
     item->valid = false;
 
-    smutex_unlock(&this->lock);
+    smutex_unlock(lock);
 }
 
 /*
@@ -248,20 +303,22 @@ addStock(int item_id, int count)
         return;
     }
 
-    smutex_lock(&this->lock);
+    smutex_t *lock = this->fineMode ? &this->locks[item_id] : &this->lock;
+
+    smutex_lock(lock);
 
     Item *item = &this->inventory[item_id];
 
     if (!item->valid) {
-        smutex_unlock(&this->lock);
+        smutex_unlock(lock);
 
         return;
     }
 
     item->quantity += count;
 
-    scond_broadcast(&this->available, &this->lock);
-    smutex_unlock(&this->lock);
+    scond_broadcast(&this->available, lock);
+    smutex_unlock(lock);
 }
 
 /*
@@ -286,12 +343,14 @@ priceItem(int item_id, double price)
         return;
     }
 
-    smutex_lock(&this->lock);
+    smutex_t *lock = this->fineMode ? &this->locks[item_id] : &this->lock;
+
+    smutex_lock(lock);
 
     Item *item = &this->inventory[item_id];
 
     if (!item->valid) {
-        smutex_unlock(&this->lock);
+        smutex_unlock(lock);
 
         return;
     }
@@ -301,10 +360,10 @@ priceItem(int item_id, double price)
     item->price = price;
 
     if (original_price > price) {
-        scond_broadcast(&this->available, &this->lock);
+        scond_broadcast(&this->available, lock);
     }
 
-    smutex_unlock(&this->lock);
+    smutex_unlock(lock);
 }
 
 /*
@@ -329,12 +388,14 @@ discountItem(int item_id, double discount)
         return;
     }
 
-    smutex_lock(&this->lock);
+    smutex_t *lock = this->fineMode ? &this->locks[item_id] : &this->lock;
+
+    smutex_lock(lock);
 
     Item *item = &this->inventory[item_id];
 
     if (!item->valid) {
-        smutex_unlock(&this->lock);
+        smutex_unlock(lock);
 
         return;
     }
@@ -344,10 +405,10 @@ discountItem(int item_id, double discount)
     item->discount = discount;
 
     if (original_discount < discount) {
-        scond_broadcast(&this->available, &this->lock);
+        scond_broadcast(&this->available, lock);
     }
 
-    smutex_unlock(&this->lock);
+    smutex_unlock(lock);
 }
 
 /*
