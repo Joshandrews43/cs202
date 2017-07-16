@@ -117,8 +117,6 @@ static void*
 supplier(void* arg)
 {
     // TODO: Your code here.
-    cout << "Running supplier...\n";
-
     Simulation *simulation = (Simulation *)arg;
 
     while (true) {
@@ -148,8 +146,6 @@ static void*
 customer(void* arg)
 {
     // TODO: Your code here.
-    cout << "Running customer...\n";
-
     Simulation *simulation = (Simulation *)arg;
 
     while (true) {
