@@ -240,7 +240,3 @@ schedule(void)
 	while (1)
 		/* do nothing */;
 }
-
-int min(int a, int b) {
-	return a < b ? a : b;
-}
