@@ -76,4 +76,19 @@ sys_priority(int priority) {
 		     : "cc", "memory");
 }
 
+/*****************************************************************************
+ * sys_proportional_share(int proportional_share)
+ *
+ *   Set proportional share for the current process.
+ *
+ *****************************************************************************/
+
+static inline void
+sys_proportional_share(int proportional_share) {
+	asm volatile("int %0\n"
+		     : : "i" (INT_SYS_PROPORTIONAL_SHARE),
+		         "a" (proportional_share)
+		     : "cc", "memory");
+}
+
 #endif

@@ -96,6 +96,10 @@ start(void)
 
 		// Set a priority
 		proc->p_priority = NPROCS - i;
+
+		// Set proportional share
+		proc->p_proportional_share = i;
+		proc->p_times_run_so_far = 0;
 	}
 
 	// Initialize the cursor-position shared variable to point to the
@@ -103,7 +107,7 @@ start(void)
 	cursorpos = (uint16_t *) 0xB8000;
 
 	// Initialize the scheduling algorithm.
-	scheduling_algorithm = 2;
+	scheduling_algorithm = 3;
 
 	// Let CPU choose whice process to run
 	schedule();
@@ -159,6 +163,11 @@ interrupt(registers_t *reg)
 	case INT_SYS_PRIORITY:
 		// The 'sys_priority' system call sets the priority for current process
 		current->p_priority = current->p_registers.reg_eax;
+		schedule();
+
+	case INT_SYS_PROPORTIONAL_SHARE:
+		// The 'sys_proportional_share' system call sets the proportional_share for current process
+		current->p_proportional_share = current->p_registers.reg_eax;
 		schedule();
 
 	case INT_CLOCK:
@@ -220,17 +229,60 @@ schedule(void)
 	if (scheduling_algorithm == 2) {
 		while (1) {
 			int i;
-			int highest_priority = 0;
+			int highest_priority = -1;
 
 			for (i = 1; i < NPROCS; i++) {
-				if (proc_array[i].p_state == P_RUNNABLE && (highest_priority == 0 || highest_priority > proc_array[i].p_priority)) {
+				if (proc_array[i].p_state == P_RUNNABLE && (highest_priority == -1 || highest_priority > proc_array[i].p_priority)) {
 					pid = i;
 					highest_priority = proc_array[i].p_priority;
 				}
 			}
 
-			if (highest_priority != 0) {
+			if (highest_priority != -1) {
 				run(&proc_array[pid]);
+			}
+		}
+	}
+
+	if (scheduling_algorithm == 3) {
+		while (1) {
+			int i;
+			int highest_proportional_share = -1;
+
+			for (i = 1; i < NPROCS; i++) {
+				if (proc_array[i].p_state != P_RUNNABLE || proc_array[i].p_proportional_share <= proc_array[i].p_times_run_so_far) {
+					continue;
+				}
+
+				if (highest_proportional_share == -1 || highest_proportional_share < proc_array[i].p_proportional_share) {
+					pid = i;
+					highest_proportional_share = proc_array[i].p_proportional_share;
+				}
+			}
+
+			if (highest_proportional_share != -1) {
+				proc_array[pid].p_times_run_so_far++;
+
+				run(&proc_array[pid]);
+			} else {
+				for (i = 1; i < NPROCS; i++) {
+					if (proc_array[i].p_state != P_RUNNABLE) {
+						continue;
+					}
+
+					proc_array[i].p_times_run_so_far = 0;
+
+					if (highest_proportional_share == -1 || highest_proportional_share < proc_array[i].p_proportional_share) {
+						pid = i;
+						highest_proportional_share = proc_array[i].p_proportional_share;
+					}
+				}
+
+				if (highest_proportional_share != -1) {
+					proc_array[pid].p_times_run_so_far++;
+
+					run(&proc_array[pid]);
+				}
 			}
 		}
 	}
