@@ -93,6 +93,9 @@ start(void)
 
 		// Mark the process as runnable!
 		proc->p_state = P_RUNNABLE;
+
+		// Set a priority
+		proc->p_priority = NPROCS - i;
 	}
 
 	// Initialize the cursor-position shared variable to point to the
@@ -100,10 +103,10 @@ start(void)
 	cursorpos = (uint16_t *) 0xB8000;
 
 	// Initialize the scheduling algorithm.
-	scheduling_algorithm = 1;
+	scheduling_algorithm = 2;
 
-	// Switch to the first process.
-	run(&proc_array[1]);
+	// Let CPU choose whice process to run
+	schedule();
 
 	// Should never get here!
 	while (1)
@@ -152,6 +155,11 @@ interrupt(registers_t *reg)
 	case INT_SYS_USER2:
 		/* Your code here (if you want). */
 		run(current);
+	
+	case INT_SYS_PRIORITY:
+		// The 'sys_priority' system call sets the priority for current process
+		current->p_priority = current->p_registers.reg_eax;
+		schedule();
 
 	case INT_CLOCK:
 		// A clock interrupt occurred (so an application exhausted its
@@ -209,8 +217,30 @@ schedule(void)
 		}	
 	}
 
+	if (scheduling_algorithm == 2) {
+		while (1) {
+			int i;
+			int highest_priority = 0;
+
+			for (i = 1; i < NPROCS; i++) {
+				if (proc_array[i].p_state == P_RUNNABLE && (highest_priority == 0 || highest_priority > proc_array[i].p_priority)) {
+					pid = i;
+					highest_priority = proc_array[i].p_priority;
+				}
+			}
+
+			if (highest_priority != 0) {
+				run(&proc_array[pid]);
+			}
+		}
+	}
+
 	// If we get here, we are running an unknown scheduling algorithm.
 	cursorpos = console_printf(cursorpos, 0x100, "\nUnknown scheduling algorithm %d\n", scheduling_algorithm);
 	while (1)
 		/* do nothing */;
+}
+
+int min(int a, int b) {
+	return a < b ? a : b;
 }
