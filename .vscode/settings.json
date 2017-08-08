@@ -8,6 +8,7 @@
         "unistd.h": "c",
         "waitflags.h": "c",
         "fcntl2.h": "c",
-        "kernel.h": "c"
+        "kernel.h": "c",
+        "lib.h": "c"
     }
 }

@@ -118,6 +118,9 @@ void kernel(const char* command) {
     //    [0,PROC_START_ADDR). This is indicated in the lab description,
     //    and we repeat it in this hint.
 
+    virtual_memory_map(kernel_pagetable, 0, 0, PROC_START_ADDR, PTE_P | PTE_W);
+    virtual_memory_map(kernel_pagetable, (uintptr_t)console, (uintptr_t)console, PAGESIZE, PTE_P | PTE_W | PTE_U);
+
     if (command && strcmp(command, "fork") == 0)
         process_setup(1, 4);
     else if (command && strcmp(command, "forkexit") == 0)
