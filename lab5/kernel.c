@@ -233,7 +233,11 @@ void exception(x86_registers* reg) {
         //   sys_page_alloc should not be able to map a page to virtual address
         //   under PROC_START_ADDR or to the page right before MEMSIZE_VIRTUAL
         //   (which would be used as the process's stack later)
+        if (addr < PROC_START_ADDR || addr == MEMSIZE_VIRTUAL - 1) {
+            panic("Invalid page address.");
 
+            break;
+        }
 
         // Exercise 3: your code here
         int r = physical_page_alloc(addr, current->p_pid);
