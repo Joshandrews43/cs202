@@ -133,6 +133,53 @@ void kernel(const char* command) {
     run(&processes[1]);
 }
 
+int find_free_physical_page_number() {
+    int i;
+
+    for (int i = 0; i < NPAGES; i++) {
+        if (pageinfo[i].owner == PO_FREE) {
+            return i;
+        }
+    }
+
+    return -1;
+}
+
+x86_pagetable *allocate_page_table(int8_t owner) {
+    int free_physical_page_number = find_free_physical_page_number();
+
+    if (free_physical_page_number == -1) {
+        return NULL;
+    }
+
+    uintptr_t free_physical_page_address = PAGEADDRESS(free_physical_page_number);
+
+    if (physical_page_alloc(free_physical_page_address, owner) == 0) {
+        return (x86_pagetable *)free_physical_page_address;
+    }    
+
+    return NULL;
+}
+
+x86_pagetable *copy_pagetable(x86_pagetable* pagetable, int8_t owner) {
+    x86_pagetable *level_one_page_table = allocate_page_table(owner);
+    x86_pagetable *level_two_page_table = allocate_page_table(owner);
+
+    if (level_one_page_table == NULL || level_two_page_table == NULL) {
+        panic("Failed to allocate free page table");
+    }
+
+    // The level-1 page table is all 0, except that pagetable->entry[0] 
+    // should equal (x86_pageentry_t) address_of_new_l2_pagetable | PTE_P | PTE_W | PTE_U
+    memset(level_one_page_table, 0, PAGESIZE);
+    level_one_page_table->entry[0] = (x86_pageentry_t)level_two_page_table | PTE_P | PTE_W | PTE_U;
+
+    // The initial mappings for addresses less than PROC_START_ADDR should be copied from those in kernel_pagetable
+    memset(level_two_page_table, 0, PAGESIZE);
+    memcpy(level_two_page_table, (x86_pagetable *)PTE_ADDR(pagetable->entry[0]), sizeof(x86_pagetable));
+
+    return level_one_page_table;
+}
 
 // process_setup(pid, program_number)
 //    Load application program `program_number` as process number `pid`.
@@ -143,8 +190,8 @@ void process_setup(pid_t pid, int program_number) {
     process_init(&processes[pid], 0);
 
     // Exercise 2: your code here
-    processes[pid].p_pagetable = kernel_pagetable;
-    ++pageinfo[PAGENUMBER(kernel_pagetable)].refcount;
+    processes[pid].p_pagetable = copy_pagetable(kernel_pagetable, pid);
+    virtual_memory_map(processes[pid].p_pagetable, PROC_START_ADDR, PROC_START_ADDR, MEMSIZE_PHYSICAL - PROC_START_ADDR, PTE_W | PTE_U);
     int r = program_load(&processes[pid], program_number);
     assert(r >= 0);
 
