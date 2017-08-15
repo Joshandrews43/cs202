@@ -288,8 +288,8 @@ void exception(x86_registers* reg) {
 
         // Exercise 3: your code here
         int r = -1;
-        int free_physical_page_number = find_free_physical_page_number();
         uintptr_t free_physical_page_address;
+        int free_physical_page_number = find_free_physical_page_number();
 
         if (free_physical_page_number != -1) {
             free_physical_page_address = PAGEADDRESS(free_physical_page_number);
