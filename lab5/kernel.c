@@ -145,14 +145,22 @@ int find_free_physical_page_number() {
     return -1;
 }
 
-x86_pagetable *allocate_page_table(int8_t owner) {
+uintptr_t find_free_physical_page_address() {
     int free_physical_page_number = find_free_physical_page_number();
 
-    if (free_physical_page_number == -1) {
+    if (free_physical_page_number != -1) {
+        return PAGEADDRESS(free_physical_page_number);
+    } else {
+        return 0;
+    }
+}
+
+x86_pagetable *allocate_page_table(int8_t owner) {
+    uintptr_t free_physical_page_address = find_free_physical_page_address();
+
+    if (free_physical_page_address == 0) {
         return NULL;
     }
-
-    uintptr_t free_physical_page_address = PAGEADDRESS(free_physical_page_number);
 
     if (physical_page_alloc(free_physical_page_address, owner) == 0) {
         return (x86_pagetable *)free_physical_page_address;
@@ -200,15 +208,10 @@ void process_setup(pid_t pid, int program_number) {
     uintptr_t stack_page = processes[pid].p_registers.reg_esp - PAGESIZE;
 
     r = -1;
-    uintptr_t free_physical_page_address;
-    int free_physical_page_number = find_free_physical_page_number();
+    uintptr_t free_physical_page_address = find_free_physical_page_address();
 
-    if (free_physical_page_number != -1) {
-        free_physical_page_address = PAGEADDRESS(free_physical_page_number);
-
-        if (physical_page_alloc(free_physical_page_address, pid) == 0) {
-            r = 0;
-        }
+    if (free_physical_page_address != 0 && physical_page_alloc(free_physical_page_address, pid) == 0) {
+        r = 0;
     }
 
     if (r >= 0) {
@@ -302,15 +305,10 @@ void exception(x86_registers* reg) {
 
         // Exercise 3: your code here
         int r = -1;
-        uintptr_t free_physical_page_address;
-        int free_physical_page_number = find_free_physical_page_number();
+        uintptr_t free_physical_page_address = find_free_physical_page_address();
 
-        if (free_physical_page_number != -1) {
-            free_physical_page_address = PAGEADDRESS(free_physical_page_number);
-
-            if (physical_page_alloc(free_physical_page_address, current->p_pid) == 0) {
-                r = 0;
-            }
+        if (free_physical_page_address != 0 && physical_page_alloc(free_physical_page_address, current->p_pid) == 0) {
+            r = 0;
         }
 
         if (r >= 0) {
