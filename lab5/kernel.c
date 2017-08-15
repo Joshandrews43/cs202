@@ -196,12 +196,26 @@ void process_setup(pid_t pid, int program_number) {
     assert(r >= 0);
 
     // Exercise 4: your code here
-    processes[pid].p_registers.reg_esp = PROC_START_ADDR + PROC_SIZE * pid;
+    processes[pid].p_registers.reg_esp = MEMSIZE_VIRTUAL;
     uintptr_t stack_page = processes[pid].p_registers.reg_esp - PAGESIZE;
-    physical_page_alloc(stack_page, pid);
-    virtual_memory_map(processes[pid].p_pagetable, stack_page, stack_page,
-                       PAGESIZE, PTE_P|PTE_W|PTE_U);
-    processes[pid].p_state = P_RUNNABLE;
+
+    r = -1;
+    uintptr_t free_physical_page_address;
+    int free_physical_page_number = find_free_physical_page_number();
+
+    if (free_physical_page_number != -1) {
+        free_physical_page_address = PAGEADDRESS(free_physical_page_number);
+
+        if (physical_page_alloc(free_physical_page_address, pid) == 0) {
+            r = 0;
+        }
+    }
+
+    if (r >= 0) {
+        virtual_memory_map(processes[pid].p_pagetable, stack_page, free_physical_page_address, PAGESIZE, PTE_P | PTE_W | PTE_U);
+
+        processes[pid].p_state = P_RUNNABLE;
+    }
 }
 
 
@@ -299,9 +313,13 @@ void exception(x86_registers* reg) {
             }
         }
 
-        if (r >= 0)
+        if (r >= 0) {
             virtual_memory_map(current->p_pagetable, addr, free_physical_page_address,
                                PAGESIZE, PTE_P|PTE_W|PTE_U);
+        } else {
+            debug_printf("%s", "Out of physical memory!");
+        }
+
         current->p_registers.reg_eax = r;
         break;
     }
