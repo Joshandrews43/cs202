@@ -287,9 +287,20 @@ void exception(x86_registers* reg) {
         }
 
         // Exercise 3: your code here
-        int r = physical_page_alloc(addr, current->p_pid);
+        int r = -1;
+        int free_physical_page_number = find_free_physical_page_number();
+        uintptr_t free_physical_page_address;
+
+        if (free_physical_page_number != -1) {
+            free_physical_page_address = PAGEADDRESS(free_physical_page_number);
+
+            if (physical_page_alloc(free_physical_page_address, current->p_pid) == 0) {
+                r = 0;
+            }
+        }
+
         if (r >= 0)
-            virtual_memory_map(current->p_pagetable, addr, addr,
+            virtual_memory_map(current->p_pagetable, addr, free_physical_page_address,
                                PAGESIZE, PTE_P|PTE_W|PTE_U);
         current->p_registers.reg_eax = r;
         break;
