@@ -207,14 +207,9 @@ void process_setup(pid_t pid, int program_number) {
     processes[pid].p_registers.reg_esp = MEMSIZE_VIRTUAL;
     uintptr_t stack_page = processes[pid].p_registers.reg_esp - PAGESIZE;
 
-    r = -1;
     uintptr_t free_physical_page_address = find_free_physical_page_address();
 
     if (free_physical_page_address != 0 && physical_page_alloc(free_physical_page_address, pid) == 0) {
-        r = 0;
-    }
-
-    if (r >= 0) {
         virtual_memory_map(processes[pid].p_pagetable, stack_page, free_physical_page_address, PAGESIZE, PTE_P | PTE_W | PTE_U);
 
         processes[pid].p_state = P_RUNNABLE;
@@ -373,6 +368,27 @@ int fork(void) {
         return -1;
 
     // Exercise 5: your code here
+    processes[pid].p_pagetable = copy_pagetable(current->p_pagetable, pid);
+
+    // Copy process data
+    uintptr_t virtual_address;
+
+    for (virtual_address = PROC_START_ADDR; virtual_address <= MEMSIZE_VIRTUAL; virtual_address += PAGESIZE) {
+        if (virtual_address == (uintptr_t)console) {
+            continue;
+        }
+
+        vamapping virtual_address_mapping = virtual_memory_lookup(processes[pid].p_pagetable, virtual_address);
+
+        if (virtual_address_mapping.perm & PTE_W) {
+            uintptr_t free_physical_page_address = find_free_physical_page_address();
+
+            if (free_physical_page_address != 0 && physical_page_alloc(free_physical_page_address, pid) == 0) {
+                memcpy((uintptr_t *)free_physical_page_address, (uintptr_t *)PAGEADDRESS(virtual_address_mapping.pn), PAGESIZE);
+                virtual_memory_map(processes[pid].p_pagetable, virtual_address, free_physical_page_address, PAGESIZE, PTE_P | PTE_W | PTE_U);
+            }
+        }
+    }
 
     processes[pid].p_registers = current->p_registers;
     processes[pid].p_registers.reg_eax = 0;
